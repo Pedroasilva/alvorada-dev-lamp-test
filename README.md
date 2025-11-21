@@ -63,10 +63,12 @@ sudo mysql_secure_installation
 On CentOS/RHEL:
 
 ```bash
-sudo yum install mysql-server
-sudo systemctl start mysqld
+sudo yum install mariadb-server
+sudo systemctl start mariadb
 sudo mysql_secure_installation
 ```
+
+> **Note:** On CentOS/RHEL 8+, MySQL is not available in default repositories. Use MariaDB (compatible with MySQL) or enable the MySQL repository from the official MySQL website.
 
 #### 4. Configure Apache
 
@@ -84,7 +86,7 @@ Add the following configuration:
     DocumentRoot /var/www/alvorada-test
 
     <Directory /var/www/alvorada-test>
-        Options Indexes FollowSymLinks
+        Options FollowSymLinks
         AllowOverride All
         Require all granted
     </Directory>
@@ -130,6 +132,8 @@ GRANT ALL PRIVILEGES ON alvorada_properties.* TO 'alvorada_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
+
+> **Security Warning:** Replace `your_secure_password` with a strong, unique password. Use a combination of uppercase, lowercase, numbers, and special characters (minimum 12 characters recommended).
 
 Import the database schema (if `database/schema.sql` exists):
 
@@ -190,7 +194,7 @@ services:
       - DB_HOST=db
       - DB_NAME=alvorada_properties
       - DB_USER=alvorada_user
-      - DB_PASS=alvorada_password
+      - DB_PASS=${DB_PASSWORD:-change_this_password}
 
   db:
     image: mysql:8.0
@@ -198,16 +202,22 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-change_this_root_password}
       - MYSQL_DATABASE=alvorada_properties
       - MYSQL_USER=alvorada_user
-      - MYSQL_PASSWORD=alvorada_password
+      - MYSQL_PASSWORD=${DB_PASSWORD:-change_this_password}
     volumes:
       - db_data:/var/lib/mysql
 
 volumes:
   db_data:
 ```
+
+> **Security Warning:** The example above uses placeholder passwords. For production use, create a `.env` file with strong passwords and add it to `.gitignore`:
+> ```
+> DB_PASSWORD=your_strong_database_password
+> MYSQL_ROOT_PASSWORD=your_strong_root_password
+> ```
 
 Then start the containers:
 
