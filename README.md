@@ -2,6 +2,8 @@
 
 This is a standalone, end-to-end mini-project designed to evaluate real-world full-stack skills using the LAMP stack (Linux, Apache, MySQL, PHP) plus JavaScript for frontend mapping. The project simulates a lightweight property research workflow.
 
+> **Note:** This README provides complete setup and run instructions for implementing the property research application. The project structure and files referenced in this document should be created as part of the implementation process.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed on your system:
@@ -129,11 +131,13 @@ FLUSH PRIVILEGES;
 EXIT;
 ```
 
-Import the database schema (if schema.sql exists):
+Import the database schema (if `database/schema.sql` exists):
 
 ```bash
 mysql -u alvorada_user -p alvorada_properties < database/schema.sql
 ```
+
+> **Note:** The `database/schema.sql` file should be created as part of the project implementation with the necessary table definitions.
 
 #### 7. Configure Database Connection
 
@@ -156,6 +160,8 @@ define('DB_CHARSET', 'utf8mb4');
 
 If Docker and Docker Compose are installed:
 
+> **Note:** You'll need to create a `docker-compose.yml` file first. See the example configuration below.
+
 #### 1. Clone the Repository
 
 ```bash
@@ -164,6 +170,46 @@ cd alvorada-dev-lamp-test
 ```
 
 #### 2. Start Docker Containers
+
+First, create a `docker-compose.yml` file in the project root with the following content:
+
+```yaml
+version: '3.8'
+
+services:
+  web:
+    image: php:8.0-apache
+    container_name: alvorada_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=alvorada_properties
+      - DB_USER=alvorada_user
+      - DB_PASS=alvorada_password
+
+  db:
+    image: mysql:8.0
+    container_name: alvorada_db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=alvorada_properties
+      - MYSQL_USER=alvorada_user
+      - MYSQL_PASSWORD=alvorada_password
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+```
+
+Then start the containers:
 
 ```bash
 docker-compose up -d
