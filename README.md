@@ -112,7 +112,8 @@ Copy the project files to the Apache document root:
 sudo mkdir -p /var/www/alvorada-test
 sudo cp -r * /var/www/alvorada-test/
 sudo chown -R www-data:www-data /var/www/alvorada-test
-sudo chmod -R 755 /var/www/alvorada-test
+sudo find /var/www/alvorada-test -type d -exec chmod 755 {} \;
+sudo find /var/www/alvorada-test -type f -exec chmod 644 {} \;
 ```
 
 #### 6. Database Setup
@@ -194,7 +195,7 @@ services:
       - DB_HOST=db
       - DB_NAME=alvorada_properties
       - DB_USER=alvorada_user
-      - DB_PASS=${DB_PASSWORD:-change_this_password}
+      - DB_PASS=${DB_PASSWORD:?Please set DB_PASSWORD in .env file}
 
   db:
     image: mysql:8.0
@@ -202,10 +203,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-change_this_root_password}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Please set MYSQL_ROOT_PASSWORD in .env file}
       - MYSQL_DATABASE=alvorada_properties
       - MYSQL_USER=alvorada_user
-      - MYSQL_PASSWORD=${DB_PASSWORD:-change_this_password}
+      - MYSQL_PASSWORD=${DB_PASSWORD:?Please set DB_PASSWORD in .env file}
     volumes:
       - db_data:/var/lib/mysql
 
@@ -213,11 +214,12 @@ volumes:
   db_data:
 ```
 
-> **Security Warning:** The example above uses placeholder passwords. For production use, create a `.env` file with strong passwords and add it to `.gitignore`:
+> **Security Warning:** This configuration requires a `.env` file with strong passwords. Create it with:
 > ```
 > DB_PASSWORD=your_strong_database_password
 > MYSQL_ROOT_PASSWORD=your_strong_root_password
 > ```
+> **Important:** Add `.env` to your `.gitignore` to prevent committing credentials.
 
 Then start the containers:
 
@@ -395,7 +397,8 @@ JavaScript is used for:
 **Solution:**
 ```bash
 sudo chown -R www-data:www-data /var/www/alvorada-test
-sudo chmod -R 755 /var/www/alvorada-test
+sudo find /var/www/alvorada-test -type d -exec chmod 755 {} \;
+sudo find /var/www/alvorada-test -type f -exec chmod 644 {} \;
 ```
 
 ### PHP Extensions Missing
