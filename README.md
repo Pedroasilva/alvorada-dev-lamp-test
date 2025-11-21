@@ -216,10 +216,10 @@ volumes:
 
 > **Security Warning:** This configuration requires a `.env` file with strong passwords. Create it with:
 > ```
-> DB_PASSWORD=your_strong_database_password
-> MYSQL_ROOT_PASSWORD=your_strong_root_password
+> DB_PASSWORD=YOUR_STRONG_DATABASE_PASSWORD_HERE
+> MYSQL_ROOT_PASSWORD=YOUR_STRONG_ROOT_PASSWORD_HERE
 > ```
-> **Important:** Add `.env` to your `.gitignore` to prevent committing credentials.
+> **Important:** Replace the placeholder values with actual strong passwords (minimum 16 characters, mix of uppercase, lowercase, numbers, and symbols). Add `.env` to your `.gitignore` to prevent committing credentials.
 
 Then start the containers:
 
