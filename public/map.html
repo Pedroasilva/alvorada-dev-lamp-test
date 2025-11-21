@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/public/css/map.css">
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <a href="/" style="display: inline-flex; align-items: center; gap: 8px; color: #667eea; text-decoration: none; font-weight: 500; transition: color 0.3s;">
+                <span style="font-size: 20px;">←</span>
+                <span>Back to Property Registration</span>
+            </a>
+        </div>
+        
+        <h1>Property Location</h1>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="loading" class="loading">Loading property data...</div>
+        
+        <div id="content" style="display: none;">
+            <div class="info-panel">
+                <h2 id="property-name"></h2>
+                <p><strong>Address:</strong> <span id="property-address"></span></p>
+                <p><strong>Display Name:</strong> <span id="property-display-name"></span></p>
+                <p><strong>Coordinates:</strong> <span id="property-coords"></span></p>
+                <p><strong>Address Type:</strong> <span id="property-addresstype"></span></p>
+                <p><strong>Class:</strong> <span id="property-class"></span></p>
+                <p><strong>Place Rank:</strong> <span id="property-place-rank"></span></p>
+            </div>
+
+            <div id="map"></div>
+
+            <div class="notes-section">
+                <h3>Notes</h3>
+                <div id="notes-list"></div>
+                
+                <div class="add-note-form">
+                    <h4>Add a Note</h4>
+                    <textarea id="note-input" placeholder="Enter your note here..."></textarea>
+                    <button onclick="addNote()">Add Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/public/js/map.js"></script>
+</body>
+</html>
