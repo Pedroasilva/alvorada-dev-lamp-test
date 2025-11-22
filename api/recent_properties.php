@@ -8,7 +8,7 @@ try {
         SELECT id, name, address, created_at 
         FROM properties 
         ORDER BY created_at DESC 
-        LIMIT 10
+        LIMIT 4
     ");
     $stmt->execute();
     $properties = $stmt->fetchAll(PDO::FETCH_ASSOC);

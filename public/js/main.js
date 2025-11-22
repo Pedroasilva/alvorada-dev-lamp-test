@@ -64,18 +64,50 @@ form.addEventListener('submit', async (e) => {
     try {
         // Call geolocation API (OpenStreetMap Nominatim)
         const geoResponse = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=5`
         );
         const geoData = await geoResponse.json();
 
         if (!geoData || geoData.length === 0) {
-            throw new Error('Address not found. Please check the address and try again.');
+            // Try a second search with more flexible parameters
+            const fallbackResponse = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=5&accept-language=en`
+            );
+            const fallbackData = await fallbackResponse.json();
+            
+            if (!fallbackData || fallbackData.length === 0) {
+                throw new Error(
+                    'Address not found. Please try:\n' +
+                    '• Adding more details (street number, city, state, country)\n' +
+                    '• Using a different format (e.g., "123 Main St, New York, NY, USA")\n' +
+                    '• Checking for typos in the address'
+                );
+            }
+            
+            // Use fallback data
+            const location = fallbackData[0];
+            const latitude = parseFloat(location.lat);
+            const longitude = parseFloat(location.lon);
+            
+            await saveProperty(name, address, latitude, longitude, location);
+            return;
         }
 
         const location = geoData[0];
         const latitude = parseFloat(location.lat);
         const longitude = parseFloat(location.lon);
 
+        await saveProperty(name, address, latitude, longitude, location);
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        loadingEl.style.display = 'none';
+        form.querySelector('button').disabled = false;
+    }
+});
+
+async function saveProperty(name, address, latitude, longitude, location) {
+    try {
         // Save to database
         const saveResponse = await fetch('/api/save_property.php', {
             method: 'POST',
@@ -101,12 +133,9 @@ form.addEventListener('submit', async (e) => {
         // Reload recent properties list
         loadRecentProperties();
     } catch (error) {
-        showMessage(error.message, 'error');
-    } finally {
-        loadingEl.style.display = 'none';
-        form.querySelector('button').disabled = false;
+        throw error;
     }
-});
+}
 
 function showMessage(text, type) {
     messageEl.textContent = text;

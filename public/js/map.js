@@ -109,12 +109,17 @@ function initMap() {
         </div>
     `;
 
-    L.marker([lat, lng])
+    const marker = L.marker([lat, lng])
         .addTo(map)
         .bindPopup(popupContent, {
             maxWidth: 350,
             minWidth: 280
         });
+    
+    // Auto-open popup after 2 seconds
+    setTimeout(() => {
+        marker.openPopup();
+    }, 500);
 }
 
 async function addNote() {
