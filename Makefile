@@ -75,6 +75,7 @@ install: build up
 	@sleep 5
 	@echo ""
 	@echo "Running additional database scripts..."
+	@docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/schema.sql 2>/dev/null || echo "  - schema.sql already applied"
 	@docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/geocode_cache.sql 2>/dev/null || echo "  - geocode_cache.sql already applied"
 	@echo ""
 	@echo "✓ Installation complete!"
