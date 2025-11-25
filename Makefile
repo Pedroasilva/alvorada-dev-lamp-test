@@ -74,6 +74,10 @@ install: build up
 	@echo "Waiting for database to initialize..."
 	@sleep 5
 	@echo ""
+	@echo "Running additional database scripts..."
+	@docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/geocode_cache.sql 2>/dev/null || true
+	@docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/performance_improvements.sql 2>/dev/null || true
+	@echo ""
 	@echo "✓ Installation complete!"
 	@echo "Access the application at http://localhost:8080"
 
@@ -98,7 +102,12 @@ db-reset:
 	@echo "Resetting database..."
 	docker-compose exec db mysql -u root -proot_password -e "DROP DATABASE IF EXISTS property_research;"
 	docker-compose exec db mysql -u root -proot_password -e "CREATE DATABASE property_research CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-	docker-compose exec db mysql -u property_user -pproperty_password property_research < sql/schema.sql
+	@echo "Running schema.sql..."
+	docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/schema.sql
+	@echo "Running geocode_cache.sql..."
+	docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/geocode_cache.sql
+	@echo "Running performance_improvements.sql..."
+	docker-compose exec -T db mysql -u property_user -pproperty_password property_research < sql/performance_improvements.sql
 	@echo "Database reset complete!"
 
 ## db-backup: Backup database to sql/backup.sql
