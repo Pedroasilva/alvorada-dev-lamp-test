@@ -34,8 +34,13 @@ try {
         exit;
     }
 
-    // Get associated notes
-    $stmt = $pdo->prepare("SELECT * FROM notes WHERE property_id = ? ORDER BY created_at DESC");
+    // Get associated notes - uses idx_property_created composite index
+    $stmt = $pdo->prepare("
+        SELECT id, property_id, note, created_at 
+        FROM notes 
+        WHERE property_id = ? 
+        ORDER BY created_at DESC
+    ");
     $stmt->execute([$propertyId]);
     $notes = $stmt->fetchAll();
 

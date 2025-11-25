@@ -56,6 +56,12 @@ try {
     
     $propertyId = $pdo->lastInsertId();
     
+    // Invalidate recent properties cache
+    if (file_exists(__DIR__ . '/cache.php')) {
+        require_once __DIR__ . '/cache.php';
+        SimpleCache::delete('recent_properties');
+    }
+    
     // Get the inserted property
     $stmt = $pdo->prepare("SELECT * FROM properties WHERE id = ?");
     $stmt->execute([$propertyId]);
