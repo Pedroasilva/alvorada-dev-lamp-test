@@ -1,50 +1,57 @@
 <?php
+ob_start();
+ini_set('display_errors','0');
 /**
- * Property API Endpoint
+ * Property API Endpoint (Refatorado)
  * GET /api/property.php?id={id}
- * Returns property details and associated notes
+ * Retorna detalhes de propriedade + notas via PropertyService
  */
 
+require_once __DIR__ . '/autoload.php';
 header('Content-Type: application/json');
-require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+    JsonResponder::send(['error' => 'Method not allowed'], 405);
     exit;
 }
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Property ID is required']);
+    JsonResponder::send(['error' => 'Property ID is required'], 400);
     exit;
 }
 
 $propertyId = (int)$_GET['id'];
 
 try {
-    // Get property details
-    $stmt = $pdo->prepare("SELECT * FROM properties WHERE id = ?");
-    $stmt->execute([$propertyId]);
-    $property = $stmt->fetch();
-
-    if (!$property) {
+    $pdo = Database::getConnection();
+    $service = new PropertyService(
+        new PropertyRepository($pdo),
+        new NoteRepository($pdo)
+    );
+    $data = $service->details($propertyId);
+    if (!$data) {
         http_response_code(404);
-        echo json_encode(['error' => 'Property not found']);
+        JsonResponder::send(['error' => 'Property not found'], 404);
         exit;
     }
 
-    // Get associated notes
-    $stmt = $pdo->prepare("SELECT * FROM notes WHERE property_id = ? ORDER BY created_at DESC");
-    $stmt->execute([$propertyId]);
-    $notes = $stmt->fetchAll();
+    // Manter contrato: property e notes como arrays crus (nominatim_data originalmente string JSON)
+    $property = $data['property'];
+    if (isset($property['nominatim_data']) && is_array($property['nominatim_data'])) {
+        $property['nominatim_data'] = json_encode($property['nominatim_data']);
+    }
 
-    echo json_encode([
+    $notes = $data['notes'];
+
+    // Mantém contrato sem adicionar chave success
+    JsonResponder::send([
         'property' => $property,
         'notes' => $notes
-    ]);
-} catch (PDOException $e) {
+    ], 200);
+} catch (Throwable $e) {
     http_response_code(500);
-    error_log("Database error in property.php: " . $e->getMessage());
-    echo json_encode(['error' => 'Failed to retrieve property data. Please try again later.']);
+    error_log('Error in property.php: ' . $e->getMessage());
+    JsonResponder::send(['error' => 'Failed to retrieve property data. Please try again later.'], 500);
 }

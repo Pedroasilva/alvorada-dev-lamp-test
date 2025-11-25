@@ -104,13 +104,78 @@ project-root/
   README.md
   AI_PROPOSAL.md
   api/
-    db.php
-    property.php
-    add_note.php
+    autoload.php        # Autoloader simples (core, models, repositories, services, controllers)
+    core/Database.php   # Singleton PDO (substitui uso direto de db.php)
+    core/JsonResponder.php # Helper para respostas JSON padronizadas (uso gradual)
+    models/Property.php # Modelo de domínio Property
+    models/Note.php     # Modelo de domínio Note
+    repositories/       # Acesso a dados (PropertyRepository, NoteRepository)
+    services/           # Regras de negócio (PropertyService, NoteService, GeocodeService)
+    save_property.php   # Endpoint refatorado -> PropertyService::create()
+    property.php        # Endpoint refatorado -> PropertyService::details()
+    add_note.php        # Endpoint refatorado -> NoteService::add()
+    geocode.php         # Endpoint refatorado -> GeocodeService::lookup()
+    recent_properties.php # Endpoint refatorado -> PropertyService::recent()
+    db.php              # LEGADO (deprecated) mantido apenas por compatibilidade
   public/
     map.html
   sql/
     schema.sql
+    geocode_cache.sql        # Cache de geocodificação
+    performance_improvements.sql # Índices adicionais
+
+## Nova Arquitetura (OOP)
+
+O projeto foi evoluído de endpoints procedurais para uma arquitetura em camadas facilitando manutenção, testes e expansão:
+
+Camadas:
+- Core: Serviços fundamentais (`Database` singleton para conexão PDO, `JsonResponder` para padronizar respostas JSON).
+- Models: Representação de entidades (`Property`, `Note`) com métodos `fromArray` / `toArray`.
+- Repositories: Acesso a dados isolado (consultas parametrizadas, uso de índices e otimizações específicas).
+- Services: Regras de negócio e validações (ex.: `PropertyService` valida latitude/longitude, `GeocodeService` gerencia cache + fallback). 
+- Controllers (opcional futuro): Poderiam orquestrar autenticação, serialização e transformação adicional antes de responder.
+
+Benefícios:
+- Separação clara de responsabilidades (SRP).
+- Reutilização de lógica (ex.: validação centralizada em services).
+- Facilidade para adicionar novas features (ex.: auditoria, autenticação) sem inflar endpoints.
+- Melhor testabilidade (métodos puros e camadas delimitadas).
+
+O antigo arquivo `api/db.php` foi removido. Toda a aplicação usa agora `Database::getConnection()` que lê variáveis de ambiente (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`). O endpoint legado `geocode.php` também foi removido após incorporar a geocodificação automática em `save_property.php`.
+
+### Fluxo de um Endpoint Refatorado
+1. `autoload.php` carrega classes necessárias.
+2. Endpoint instancia repositórios com `Database::getConnection()`.
+3. Service realiza validação/regra de negócio e retorna arrays prontos.
+4. Endpoint formata resposta (ou usa `JsonResponder`).
+
+### Geocodificação
+`GeocodeService` encapsula:
+- Leitura de cache (`geocode_cache`)
+- Requisição Nominatim com User-Agent apropriado
+- Fallback com `accept-language=en`
+- Persistência dos resultados no cache e logging em `geocoding_logs`
+- Normalização do formato de resposta para manter contrato anterior (`success`, `cached`, `data`).
+
+### Performance
+O `PropertyRepository::recent()` utiliza `FORCE INDEX (idx_recent_props)` para garantir uso de índice de tempo na consulta de últimas propriedades. Índices adicionais definidos em `performance_improvements.sql` otimizam filtros comuns.
+
+### Contratos de Resposta
+Foram preservadas chaves originais dos endpoints:
+- `save_property.php`: `{ success: true, property: {...} }`
+- `property.php`: `{ property: {...}, notes: [...] }`
+- `add_note.php`: `{ success: true, note_id: N }`
+- (Removido) `geocode.php`: geocodificação agora interna em `save_property.php`.
+- Nova rota REST: `GET /api/properties/recent` -> `{ success: true, properties: [...] }` (até 10 registros).
+- `recent_properties.php`: `{ success: true, properties: [...] }`
+
+### Próximos Passos Possíveis
+- (Concluído) Remoção definitiva de `db.php` e atualização deste README.
+- Introduzir `JsonResponder` em todos os endpoints para consistência.
+- Adicionar camada de controllers caso surja autenticação/ACL.
+- Cobertura de testes unitários (services + repositories) e testes de contrato (endpoints).
+- Adicionar caching adicional (ex.: propriedades recentes) usando mesmo padrão de geocode.
+
 ```
 
 ## Setup Instructions
@@ -230,24 +295,15 @@ mysql -u property_user -p property_research < /var/www/property-research/sql/sch
 
 #### 6. Configure Database Connection
 
-Edit `api/db.php` with your database credentials:
+Configure as variáveis de ambiente do banco (ex: em Apache ou `.env`) para conexão:
 
-```php
-<?php
-$host = 'localhost';
-$dbname = 'property_research';
-$username = 'property_user';
-$password = 'your_secure_password';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
-}
-?>
+```env
+DB_HOST=localhost
+DB_NAME=property_research
+DB_USER=property_user
+DB_PASS=your_secure_password
 ```
+O singleton `Database` cuidará da conexão.
 
 ### Option 2: Docker Setup
 
@@ -386,23 +442,14 @@ networks:
 
 ##### 3. Update Database Connection
 
-Update `api/db.php` to use Docker environment variables:
+Defina variáveis no serviço `web` (já presentes no `docker-compose.yml`). O `Database` buscará automaticamente:
 
-```php
-<?php
-$host = getenv('DB_HOST') ?: 'db';
-$dbname = getenv('DB_NAME') ?: 'property_research';
-$username = getenv('DB_USER') ?: 'property_user';
-$password = getenv('DB_PASS') ?: 'property_password';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
-}
-?>
+```yaml
+environment:
+  - DB_HOST=db
+  - DB_NAME=property_research
+  - DB_USER=property_user
+  - DB_PASS=property_password
 ```
 
 ##### 4. Start Docker Containers
@@ -609,7 +656,7 @@ If not running, start it:
 sudo systemctl start mysql
 ```
 
-Check database credentials in `api/db.php` and ensure the database and user exist.
+Verifique se as variáveis de ambiente (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`) estão corretas e se o usuário existe.
 
 Test MySQL connection:
 

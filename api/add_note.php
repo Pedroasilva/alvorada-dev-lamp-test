@@ -1,57 +1,51 @@
 <?php
+ob_start();
+ini_set('display_errors','0');
 /**
- * Add Note API Endpoint
+ * Add Note API Endpoint (Refatorado)
  * POST /api/add_note.php
- * Adds a new note to a property
+ * Cria nota associada usando NoteService
  */
 
+require_once __DIR__ . '/autoload.php';
 header('Content-Type: application/json');
-require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+    JsonResponder::send(['error' => 'Method not allowed'], 405);
     exit;
 }
 
-// Get POST data
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_decode(file_get_contents('php://input'), true) ?: [];
 
 if (!isset($input['property_id']) || !is_numeric($input['property_id'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Property ID is required']);
+    JsonResponder::send(['error' => 'Property ID is required'], 400);
     exit;
 }
-
-if (!isset($input['note']) || empty(trim($input['note']))) {
+if (!isset($input['note']) || trim((string)$input['note']) === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'Note content is required']);
+    JsonResponder::send(['error' => 'Note content is required'], 400);
     exit;
 }
-
-$propertyId = (int)$input['property_id'];
-$note = trim($input['note']);
 
 try {
-    // Verify property exists
-    $stmt = $pdo->prepare("SELECT id FROM properties WHERE id = ?");
-    $stmt->execute([$propertyId]);
-    if (!$stmt->fetch()) {
+    $pdo = Database::getConnection();
+    $service = new NoteService(new NoteRepository($pdo), new PropertyRepository($pdo));
+    $created = $service->add((int)$input['property_id'], (string)$input['note']);
+
+    JsonResponder::success(['note_id' => $created['id'] ?? null]);
+} catch (InvalidArgumentException $e) {
+    // Para manter semântica anterior: Property not found => 404; validações => 400
+    $msg = $e->getMessage();
+    if (stripos($msg, 'Property') !== false && stripos($msg, 'not found') !== false) {
         http_response_code(404);
-        echo json_encode(['error' => 'Property not found']);
-        exit;
+    } else {
+        http_response_code(400);
     }
-
-    // Insert note
-    $stmt = $pdo->prepare("INSERT INTO notes (property_id, note, created_at) VALUES (?, ?, NOW())");
-    $stmt->execute([$propertyId, $note]);
-
-    echo json_encode([
-        'success' => true,
-        'note_id' => $pdo->lastInsertId()
-    ]);
-} catch (PDOException $e) {
+    JsonResponder::send(['error' => $msg], http_response_code());
+} catch (Throwable $e) {
     http_response_code(500);
-    error_log("Database error in add_note.php: " . $e->getMessage());
-    echo json_encode(['error' => 'Failed to add note. Please try again later.']);
+    error_log('Error in add_note.php: ' . $e->getMessage());
+    JsonResponder::send(['error' => 'Failed to add note. Please try again later.'], 500);
 }

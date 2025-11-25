@@ -45,13 +45,13 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Backend geocoding (via our API)
+// Envio direto para o backend que agora geocodifica internamente
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await geocodeViaBackend();
+    await submitProperty();
 });
 
-async function geocodeViaBackend() {
+async function submitProperty() {
     const name = document.getElementById('name').value.trim();
     const address = document.getElementById('address').value.trim();
 
@@ -67,42 +67,19 @@ async function geocodeViaBackend() {
     form.querySelector('button').disabled = true;
 
     try {
-        // Call backend geocoding API
-        const geocodeResponse = await fetch('/api/geocode.php', {
+        const saveResponse = await fetch('/api/save_property.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ address })
+            body: JSON.stringify({ name, address })
         });
-
-        const geocodeData = await geocodeResponse.json();
-
-        if (!geocodeData.success) {
-            throw new Error(geocodeData.error || 'Geocoding failed');
+        const saveData = await saveResponse.json();
+        if (!saveResponse.ok || !saveData.success) {
+            throw new Error(saveData.error || 'Failed to save property');
         }
-
-        const geoData = geocodeData.data;
-        
-        if (!geoData || geoData.length === 0) {
-            throw new Error(
-                'Address not found. Please try:\n' +
-                '• Adding more details (street number, city, state, country)\n' +
-                '• Using a different format (e.g., "123 Main St, New York, NY, USA")\n' +
-                '• Checking for typos in the address'
-            );
-        }
-
-        const location = geoData[0];
-        const latitude = parseFloat(location.lat);
-        const longitude = parseFloat(location.lon);
-
-        await saveProperty(name, address, latitude, longitude, location);
-        
-        // Show cache status
-        if (geocodeData.cached) {
-            showMessage('✓ Address retrieved from cache', 'success');
-        }
+        showSuccess(saveData);
+        loadRecentProperties();
     } catch (error) {
         showMessage(error.message, 'error');
     } finally {
@@ -111,7 +88,7 @@ async function geocodeViaBackend() {
     }
 }
 
-async function saveProperty(name, address, latitude, longitude, location) {
+async function savePropertyDeprecated(name, address, latitude, longitude, location) { // mantido apenas para referência histórica
     try {
         // Save to database
         const saveResponse = await fetch('/api/save_property.php', {
