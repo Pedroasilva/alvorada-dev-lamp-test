@@ -1,3 +1,20 @@
+A entrevista foi feita.
+Fica dicas para futuras pesquisas:
+
+Utilize classes, tipe toda a entrada e toda saída.
+
+Coloque logo no inicio um strict type.
+
+O cliente é leigo e precisa de informações básicas então haverá perguntas do tipo: "para colocar em produção, qual servidor eu uso? Quanto custa? O que preciso configurar?"
+
+Foque mais no produto que no código.
+
+e Boa Sorte!
+
+
+
+------------
+
 # Full-Stack PHP Engineer - Property Research System
 
 This is a standalone, end-to-end mini-project designed to evaluate real-world full-stack skills using the LAMP stack (Linux, Apache, MySQL, PHP) plus JavaScript for frontend mapping. The project simulates a lightweight property research workflow.
